@@ -1,0 +1,52 @@
+
+* {
+//  border: 1px solid red;
+}
+body {
+  font-size: 2rem;
+  font-family:verdana;
+}
+nav {
+  margin: 0;
+  padding: 0;
+  padding: 0em 0em 1.2em 0em;
+}
+nav ul {
+  margin: 0;
+  padding: 0;
+}
+nav ul:first-child > li:first-child a {
+  font-weight: bold;
+}
+nav ul li {
+  list-style:none;
+  padding: 0em 1.25em 0em 0em;
+}
+main {
+}
+footer {
+}
+footer ul {
+}
+.breadcrumbs::before {
+  content: ">";
+}
+.breadcrumbs {
+  font-size: 75%;
+  display: block;
+}
+@media screen and (min-width: 720px) {
+  nav ul.left li {
+    float:left;
+  }
+  nav ul.right li {
+    float:right;
+  }
+  header > div {
+    clear: both;
+  }
+  .breadcrumbs {
+    clear: both;
+  }
+}
+
