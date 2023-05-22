@@ -55,7 +55,7 @@ app.add_middleware(
 
 class system_services(dict):
     def __getattr__(self, name):
-        return [getattr(each,name) for each in self.values()]
+        return {each.name:getattr(each,name) for each in self.values()}
 
 # result = subprocess.run(["python", "-c", "print(subprocess)"], capture_output=True, text=True, timeout=5)
 
@@ -135,6 +135,9 @@ class profile_files(dict):
 allowed_services = [
         "mmdvmhost",
         "m17gateway",
+        "docker",
+        "sshd",
+        "mr",
         ]
 allowed_paths = [
         "/etc/mosquitto/mosquitto.conf",
@@ -245,7 +248,13 @@ def status_service(svc="all"):
 
 @app.post("/services/{svc}/restart")
 def restart_service(svc="all"):
-    return svcs.restart()
+    if svc == "all":
+        return svcs.restart()
+    else:
+        if svc in svcs:
+            return svcs[svc].restart()
+        else:
+            return HTTPException(status_code=404)
 
 @app.get("/")
 def read_root():
