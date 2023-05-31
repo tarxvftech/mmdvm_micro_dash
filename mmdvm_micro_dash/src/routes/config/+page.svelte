@@ -1,5 +1,6 @@
 <script>
   import { onMount } from "svelte";
+  import { svcapi, fileapi } from "$lib/fileapi";
 
   import CodeMirror from "svelte-codemirror-editor";
 
@@ -14,86 +15,22 @@
   //theme
   import { oneDark } from "@codemirror/theme-one-dark";
 
-  const apiURL = "http://localhost:8000/";
   let files = {};
+  let snapshots = {};
   let svcs = {};
   let currentfile = "";
   let lang = undefined;
   let filecontents = "File not loaded yet, this is example text. If you're seeing this there might be an error loading the file.";
-  const svcapi = {
-    base: apiURL,
-    _get: async function (url){
-      const r = await fetch(url);
-      const c = await r.json();
-      console.log(c);
-      return c;
-    },
-    restart: async function (name){
-      const r = await fetch( this.base + "services/" + name + "/restart", {
-	method: "POST",
-      });
-      const c = await r.json();
-      return c;
-    },
-    list: async function (){
-      let svcs = await this._get( this.base + "services" );
-      let statuses = await this._get( this.base + "services/all/status" );
-      console.log("svcs,statuses",svcs,statuses);
-      for( let s in statuses ){
-	svcs[s].status = statuses[s].returncode;
-      }
-      return svcs;
-    },
-  };
-  const fileapi = {
-    base: apiURL,
-    _get: async function (url){
-      const r = await fetch(url);
-      const c = await r.json();
-      return c;
-    },
-    list: async function (){
-      return await this._get( this.base + "files/" );
-    },
-    list_snapshots: async function (hash){
-      return await this._get( this.base + "files/" + hash + "/backups" );
-    },
-    backup: async function (hash){
-      const r = await fetch( this.base + "files/" + hash + "/backups", {
-	method: "POST",
-      });
-      const c = await r.json();
-      return c;
-    },
-    restore: async function (hash,bid){
-      const r = await fetch( this.base + "files/" + hash + "/backups/" + bid + "/restore", {
-	method: "POST",
-      });
-      const c = await r.json();
-      return c;
-    },
-    read: async function (hash){
-      return await this._get( this.base + "files/" + hash + "/read" );
-    },
-    write: async function (hash, contents){
-      let fd = new FormData();
-      fd.append("contents", contents);
-      const r = await fetch( this.base + "files/" + hash + "/write", {
-	method: "PUT",
-	body: fd,
-      });
-      const c = await r.json();
-      return c;
-    },
-  };
+  const apiURL = "http://localhost:8000/";
+  let apis = {"fileapi":new fileapi(apiURL), "svcapi":new svcapi(apiURL)};
   onMount(async function() {
-    files = await fileapi.list();
-    svcs = await svcapi.list();
+    files = await apis.fileapi.list();
+    svcs = await apis.svcapi.list();
     console.log("Files:",files);
   });
   async function save(e){
     console.log("Save:",e);
-    return await fileapi.write(currentfile, filecontents);
+    return await apis.fileapi.write(currentfile, filecontents);
   }
   async function selected(e){
     console.log("Selected:",e);
@@ -101,11 +38,13 @@
     if( currentfile == "nofile" ){
       currentfile = "";
       filecontents = "";
+      snapshots = {};
       return;
     }
     try {
-      filecontents = await fileapi.read(currentfile);
+      filecontents = await apis.fileapi.read(currentfile);
       console.log("Contents:",filecontents);
+      snapshots = await apis.fileapi.list_snapshots(currentfile);
     } catch(error){
       //currentfile = "";
       filecontents = "Error: Could not load file.\n";
@@ -149,8 +88,10 @@
   width:100%;
   clear:both;
 }
-.services {
+.services, .filehistory {
   clear:both;
+}
+.filehistory button {
 }
 
 </style>
@@ -167,7 +108,7 @@
 	<tr>
 	  <th>{svc.name}</th>
 	  <td>{svc.status}</td>
-	  <td><button on:click="{svcapi.restart(svc.name)}">restart</button></td>
+	  <td><button on:click="{apis.svcapi.restart(svc.name)}">restart</button></td>
 	</tr>
 	{/each}
     </table>
@@ -182,6 +123,20 @@
     </select>
     {#if currentfile }
     <h2>{files[currentfile].path}</h2>
+  <div class="filehistory">
+    <div class="diff">
+    </div>
+    <div class="timeline">
+      <ul>
+      {#each Object.values(snapshots) as snapshot}
+	<li>{snapshot}</li>
+      {/each}
+      </ul>
+    </div>
+    <button>Older</button>
+    <button>Restore</button>
+    <button>Newer</button>
+  </div>
     <CodeMirror bind:value={filecontents} lang={lang} theme={oneDark} />
     <button on:click={save}>Save</button>
     <!-- With Thanks to https://github.com/touchifyapp/svelte-codemirror-editor and all the upstream projects for making this so easy! -->

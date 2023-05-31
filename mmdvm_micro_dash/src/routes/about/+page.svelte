@@ -3,7 +3,8 @@
 <p>The intent of this project is to provide a minimalist, extensible,
 and most importantly easy-to-understand dashboard for the MMDVM
 platform. Competing (and much more featureful) dashboards include
-Pi-star and W0CHP's fork of it, among a handful of others.</p>
+Pi-Star and W0CHP's fork of Pi-Star, among a handful of others.</p>
+
 <p>I looked at all of them and while I've
 benefited from them greatly, found integrating any of them into <a
 href="https://git.sr.ht/~tarxvf/pim17" target="about:blank">pim17</a>

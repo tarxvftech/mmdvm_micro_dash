@@ -9,7 +9,12 @@ const config = {
 		// See https://kit.svelte.dev/docs/adapters for more information about adapters.
 		//adapter: adapter()
 		adapter: adapter({
-			fallback: 'index.html' // may differ from host to host
+			fallback: 'index.html', // may differ from host to host
+			pages: 'build',
+			assets: 'build',
+			precompress: false,
+			strict: true,
+			trailingSlash: 'always'
 		}),
 	}
 };
