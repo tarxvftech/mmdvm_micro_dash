@@ -140,12 +140,13 @@ allowed_services = [
         "mr",
         ]
 allowed_paths = [
+        "/etc/MMDVM.ini",
+        "/etc/M17Gateway.ini",
         "/etc/mosquitto/mosquitto.conf",
-        "/etc/MMDVMHost",
-        "/etc/M17Gateway",
-        "/home/mike/projects/mmdvm_micro_dash/mmdvm_micro_dash/static/main.css",
+        "/boot/wpa_supplicant_additions.txt",
+        "/etc/hostname",
         ]
-backups_base_path = pathlib.Path("/tmp/backups/")
+backups_base_path = pathlib.Path("/data/backups/")
 
 
 pp(allowed_paths)
