@@ -38,8 +38,10 @@ def hash(s):
     m.update(s.encode("utf-8"))
     m.update(b"micro_web_file_editor")
     return m.hexdigest()
+
 def pathhash(p):
     return hash(p)[0:10]
+
 origins = [
     "*",
     "pim17.local"
@@ -145,8 +147,10 @@ allowed_paths = [
         "/etc/mosquitto/mosquitto.conf",
         "/boot/wpa_supplicant_additions.txt",
         "/etc/hostname",
+        "./makefile",
         ]
-backups_base_path = pathlib.Path("/data/backups/")
+# backups_base_path = pathlib.Path("/data/backups/")
+backups_base_path = pathlib.Path("./backups/")
 
 
 pp(allowed_paths)
