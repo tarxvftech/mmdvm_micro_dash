@@ -11,7 +11,7 @@ import hashlib
 from typing import Annotated
 from dataclasses import dataclass
 from typing import Union
-from fastapi import FastAPI, HTTPException, File, UploadFile
+from fastapi import Request, FastAPI, HTTPException, File, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 
 
@@ -92,7 +92,11 @@ class editable_file:
         return contents
 
     def gen_filename(self, description):
-        return "change_%s_%d"%(hashfile(self.path)[0:10],time.time())
+        sh = hashfile(self.path)[0:16]
+        p = pathhash(self.path)
+        t = int(time.time())
+        s = f"change_{p}_{t}_{sh}"
+        return s
 
     def backup_and_write(self, bs:bytes):
         self.snapshot(snapid=self.gen_filename("change"))
@@ -126,6 +130,7 @@ class editable_file:
         if not p.exists():
             return []
         fs = [os.path.basename(x) for x in p.iterdir()]
+        fs.sort()
         return fs
 
 
@@ -187,11 +192,12 @@ def read_file(h):
         return HTTPException(status_code=404)
 
 @app.put("/files/{h}/write")
-def write_file(h, contents: Annotated[bytes, File()]):
+async def write_file(h: str, request: Request):
     print("h:",h)
     if h in files:
         p = files[h]
         print("p:", p)
+        contents = await request.body()
         return p.backup_and_write(contents)
     else:
         return HTTPException(status_code=404)
