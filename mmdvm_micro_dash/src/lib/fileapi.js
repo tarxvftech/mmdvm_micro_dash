@@ -33,7 +33,7 @@ class fileapi {
 	this.base = apiURL;
   }
   async _get(url){
-	console.log(url);
+    console.log(url);
     const r = await fetch(url);
     const c = await r.json();
     return c;
@@ -62,11 +62,12 @@ class fileapi {
     return await this._get( this.base + "files/" + hash + "/read" );
   }
   async write(hash, contents){
-    let fd = new FormData();
-    fd.append("contents", contents);
     const r = await fetch( this.base + "files/" + hash + "/write", {
       method: "PUT",
-      body: fd,
+      headers: {
+	"Content-Type": "application/octet-stream" 
+      },
+      body: contents instanceof Uint8Array ? contents : new TextEncoder().encode(contents),
     });
     const c = await r.json();
     return c;

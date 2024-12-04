@@ -15,12 +15,24 @@
   //theme
   import { oneDark } from "@codemirror/theme-one-dark";
 
+  async function hashString(message) {
+    const encoder = new TextEncoder();
+    const data = encoder.encode(message);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    const hashHex = hashArray.map(byte => byte.toString(16).padStart(2, '0')).join('');
+    return hashHex;
+  }
+
   let files = {};
   let snapshots = {};
   let svcs = {};
   let currentfile = "";
   let lang = undefined;
-  let filecontents = "File not loaded yet, this is example text. If you're seeing this there might be an error loading the file.";
+  let filecontents = "";
+  let loadedfilecontenthash = "";
+  let filecontenthashnew = "";
+  let editorerrors = "File not loaded yet, this is example text. If you're seeing this there might be an error loading the file.";
   const apiURL = "http://localhost:8000/";
   let apis = {"fileapi":new fileapi(apiURL), "svcapi":new svcapi(apiURL)};
   onMount(async function() {
@@ -28,9 +40,36 @@
     svcs = await apis.svcapi.list();
     console.log("Files:",files);
   });
+  let contentschanged = false;
+  let loadedrestore = false;
   async function save(e){
+    editorerrors = "Saving...";
     console.log("Save:",e);
-    return await apis.fileapi.write(currentfile, filecontents);
+    try {
+      let x = await apis.fileapi.write(currentfile, filecontents);
+      editorerrors = "";
+      loadedfilecontenthash = await hashString(filecontents);
+      contentschanged = false;
+      loadedrestore = false;
+    } catch(e){
+      editorerrors = "Error during save:";
+      editorerrors += e;
+      loadedfilecontenthash = "";
+    }
+    try {
+      snapshots = await apis.fileapi.list_snapshots(currentfile);
+    } catch(e){
+      editorerrors = "Error during snapshot load:";
+      editorerrors += e;
+    }
+
+  }
+  async function restore(e){
+    console.log("restore:",e);
+    //return await apis.fileapi.write(currentfile, filecontents);
+    loadedrestore = true;
+    contentschanged = false;
+    loadedfilecontenthash = await hashString(filecontents);
   }
   async function selected(e){
     console.log("Selected:",e);
@@ -38,19 +77,35 @@
     if( currentfile == "nofile" ){
       currentfile = "";
       filecontents = "";
+      editorerrors = "";
+      loadedfilecontenthash = "";
+      filecontenthashnew = "";
+      contentschanged = false;
+      loadedrestore = false;
       snapshots = {};
       return;
     }
     try {
+      editorerrors = "Loading";
       filecontents = await apis.fileapi.read(currentfile);
-      console.log("Contents:",filecontents);
+      loadedfilecontenthash = await hashString(filecontents);
+      filecontenthashnew = "";
+      editorerrors = "File Loaded, loading snapshots";
+      console.log("Contents:",filecontents,loadedfilecontenthash);
       snapshots = await apis.fileapi.list_snapshots(currentfile);
+      if( Object.values(snapshots).length == 0 ){
+	//backup();
+	let backup = await apis.fileapi.backup(currentfile);
+      }
+      editorerrors = "";
     } catch(error){
       //currentfile = "";
-      filecontents = "Error: Could not load file.\n";
-      filecontents += error;
-      filecontents += "\nSee console for details";
+      editorerrors = "Error: Could not load file.\n";
+      editorerrors += error;
       set_lang("");
+      filecontents = "";
+      loadedfilecontenthash = "";
+      snapshots = {};
       return;
     }
     let parts = files[currentfile].path.split("/");
@@ -78,7 +133,17 @@
     }
     console.log("lang=",lang);
   }
-  //TODO: show errors on errors
+  async function codechange(evt){
+    console.log(evt);
+    filecontenthashnew = await hashString(filecontents);
+    if( loadedfilecontenthash == filecontenthashnew ){
+      contentschanged = false;
+    }
+    else if( loadedfilecontenthash != filecontenthashnew ){
+      contentschanged = true;
+    }
+  }
+  //TODO
   //write files on change
   //UI around backups
   //UI for read-only examples
@@ -104,13 +169,13 @@
 	<th>status</th>
 	<th>do</th>
       </tr>
-	{#each Object.values(svcs) as svc }
-	<tr>
-	  <th>{svc.name}</th>
-	  <td>{svc.status}</td>
-	  <td><button on:click="{apis.svcapi.restart(svc.name)}">restart</button></td>
-	</tr>
-	{/each}
+      {#each Object.values(svcs) as svc }
+      <tr>
+	<th>{svc.name}</th>
+	<td>{svc.status}</td>
+	<td><button on:click="{apis.svcapi.restart(svc.name)}">restart</button></td>
+      </tr>
+      {/each}
     </table>
     {/if}
   </div>
@@ -123,22 +188,38 @@
     </select>
     {#if currentfile }
     <h2>{files[currentfile].path}</h2>
-  <div class="filehistory">
-    <div class="diff">
+    <div class="filehistory">
+      <div class="diff">
+      </div>
+      <div class="timeline">
+	<ul>
+	  {#each Object.values(snapshots) as snapshot}
+	  <li>
+	    <!--<button>Load</button>-->
+	    <!--<button>Restore</button>-->
+	    <!--<button>Rename</button>-->
+	    <!--<button on:click={apis.fileapi.delete(currentfile)}}>Delete</button>-->
+	    {snapshot}
+	  </li>
+	  {/each}
+	</ul>
+      </div>
+      {#if Object.values(snapshots).length }
+      <button>Older</button>
+      <button>Newer</button>
+      {/if}
     </div>
-    <div class="timeline">
-      <ul>
-      {#each Object.values(snapshots) as snapshot}
-	<li>{snapshot}</li>
-      {/each}
-      </ul>
+    <div id="editorerrors" >
+      {editorerrors}
     </div>
-    <button>Older</button>
-    <button>Restore</button>
-    <button>Newer</button>
-  </div>
-    <CodeMirror bind:value={filecontents} lang={lang} theme={oneDark} />
-    <button on:click={save}>Save</button>
+      <CodeMirror bind:value={filecontents} lang={lang} theme={oneDark} on:change="{codechange}" lineWrapping=true />
+    {#if contentschanged }
+    <button on:click={save}>Save*</button>
+    {:else if !contentschanged && loadedrestore }
+    <button on:click={restore}>Restore</button>
+    {:else}
+    <button disabled>(Current file)</button>
+    {/if}
     <!-- With Thanks to https://github.com/touchifyapp/svelte-codemirror-editor and all the upstream projects for making this so easy! -->
     {/if}
   </div>
