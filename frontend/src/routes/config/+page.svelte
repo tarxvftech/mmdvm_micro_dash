@@ -1,6 +1,6 @@
 <script>
   import { onMount } from "svelte";
-  import { svcapi, fileapi } from "$lib/microdash";
+  import { fileapi } from "$lib/microdash";
 
   import CodeMirror from "svelte-codemirror-editor";
 
@@ -26,7 +26,6 @@
 
   let files = {};
   let snapshots = {};
-  let svcs = {};
   let currentfile = "";
   let lang = undefined;
   let filecontents = "";
@@ -34,10 +33,9 @@
   let filecontenthashnew = "";
   let editorerrors = "File not loaded yet, this is example text. If you're seeing this there might be an error loading the file.";
   const apiURL = "http://localhost:8000/";
-  let apis = {"fileapi":new fileapi(apiURL), "svcapi":new svcapi(apiURL)};
+  let apis = {"fileapi":new fileapi(apiURL)};
   onMount(async function() {
     files = await apis.fileapi.list();
-    svcs = await apis.svcapi.list();
     console.log("Files:",files);
   });
   let contentschanged = false;
@@ -153,7 +151,7 @@
   width:100%;
   clear:both;
 }
-.services, .filehistory {
+.filehistory {
   clear:both;
 }
 .filehistory button {
@@ -161,27 +159,6 @@
 
 </style>
 <div>
-  <div class="services">
-    {#if svcs }
-    <table>
-      <tr>
-	<th>name</th>
-	<th>status</th>
-	<th>do</th>
-      </tr>
-      {#each Object.values(svcs) as svc }
-      <tr>
-	<th>{svc.name}</th>
-	<td>{svc.status}</td>
-	<td><button on:click="{apis.svcapi.status(svc.name)}">status</button></td>
-	<td><button on:click="{apis.svcapi.start(svc.name)}">start/enable</button></td>
-	<td><button on:click="{apis.svcapi.restart(svc.name)}">restart</button></td>
-	<td><button on:click="{apis.svcapi.stop(svc.name)}">stop/disable</button></td>
-      </tr>
-      {/each}
-    </table>
-    {/if}
-  </div>
   <div class="editor">
     <select on:change={selected}>
       <option value="nofile">Select file to edit here</option>

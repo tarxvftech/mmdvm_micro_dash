@@ -6,15 +6,34 @@
   --color-bg-alt: #e9e9e9;
   --color-text: #222222;
   --max-width: 50em; 
+  --xvfblue: #36a9e1;
 }
 
-header nav ul li img {
-  max-height: 2em;
+header nav img.logo {
+  /*max-height: 2em;*/
+  max-width: 3em;
+  width: 3em;
   margin-bottom: 0;
-  transition: filter 4s ease-in-out;
+  transition: * 5s ease-in-out;
+  transition: filter 5s ease-in-out;
 }
-header nav ul li img:hover {
-  filter: contrast(1.5) hue-rotate(1080deg) drop-shadow(20px 20px 5px black) brightness(1.2) saturate(2);
+header nav ul li a:hover:has(img) {
+  border-bottom: none;
+}
+header nav img.logo:hover {
+
+  filter: 
+
+    saturate(1.2)
+    contrast(1.1) 
+    brightness(1.1) 
+
+    drop-shadow(5px 5px 1px black) 
+    drop-shadow(-5px 5px 4px grey) 
+    ;
+
+
+
 }
 
 
