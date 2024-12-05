@@ -1,6 +1,6 @@
 <script>
   import { onMount } from "svelte";
-  import { svcapi, fileapi } from "$lib/fileapi";
+  import { svcapi, fileapi } from "$lib/microdash";
 
   import CodeMirror from "svelte-codemirror-editor";
 
@@ -162,7 +162,7 @@
 </style>
 <div>
   <div class="services">
-    {#if 0 && svcs }
+    {#if svcs }
     <table>
       <tr>
 	<th>name</th>
@@ -173,7 +173,10 @@
       <tr>
 	<th>{svc.name}</th>
 	<td>{svc.status}</td>
+	<td><button on:click="{apis.svcapi.status(svc.name)}">status</button></td>
+	<td><button on:click="{apis.svcapi.start(svc.name)}">start/enable</button></td>
 	<td><button on:click="{apis.svcapi.restart(svc.name)}">restart</button></td>
+	<td><button on:click="{apis.svcapi.stop(svc.name)}">stop/disable</button></td>
       </tr>
       {/each}
     </table>
