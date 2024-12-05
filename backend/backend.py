@@ -1,46 +1,16 @@
-import os
-import glob
-import json
-import time
 import pathlib
-import operator
-import itertools
-import functools
-import subprocess
-import hashlib
-from typing import Annotated
-from dataclasses import dataclass
-from typing import Union
+import pprint
+pp=pprint.pprint
+
 from fastapi import Request, FastAPI, HTTPException, File, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 
 
-import pprint
-pp=pprint.pprint
+from misc import *
+from files import *
+from services import *
 
 app = FastAPI()
-
-def flatten(itr):
-    """https://stackoverflow.com/a/63316751"""
-    for x in itr:
-        try:
-            yield from flatten(x)
-        except TypeError:
-            yield x
-def hashfile(fn):
-    m = hashlib.sha256()
-    with open(fn,"rb") as fd:
-        m.update(fd.read())
-    return m.hexdigest()
-
-def hash(s):
-    m = hashlib.sha256()
-    m.update(s.encode("utf-8"))
-    m.update(b"micro_web_file_editor")
-    return m.hexdigest()
-
-def pathhash(p):
-    return hash(p)[0:10]
 
 origins = [
     "*",
@@ -55,132 +25,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-class system_services(dict):
-    def __getattr__(self, name):
-        return callable_dict({each.name:getattr(each,name) for each in self.values()})
 
-class callable_dict(dict):
-    def __call__(self, *args, **kwargs):
-        return {name:fn(*args,**kwargs) for name,fn in self.items()}
-
-# result = subprocess.run(["python", "-c", "print(subprocess)"], capture_output=True, text=True, timeout=5)
-
-service_verbs = ["restart","stop","status","start","enable","disable"]
-@dataclass
-class system_service:
-    name: str
-    timeout: int = 10
-    def __getattr__(self, name):
-        if name in service_verbs:
-            if hasattr(self,name+"cmd"):
-                def fn():
-                    cmd = getattr(self, name+"cmd")
-                    ret = subprocess.run(cmd, capture_output=True, text=True, timeout=self.timeout)
-                    return ret
-                return fn
-            else:
-                raise(NotImplementedError)
-        else:
-            print(self,name)
-
-class rcd_service(system_service):
-    @property
-    def statuscmd(self):
-        return ["rc-service", self.name, "status"]
-    @property
-    def startcmd(self):
-        return ["rc-service", self.name, "start"]
-    @property
-    def restartcmd(self):
-        return ["rc-service", self.name, "restart"]
-    @property
-    def stopcmd(self):
-        return ["rc-service", self.name, "stop" ]
-    @property
-    def enablecmd(self):
-        return ["rc-update", "add", self.name]
-    @property
-    def disablecmd(self):
-        return ["rc-update", "del", self.name]
-
-class systemd_service(system_service):
-    @property
-    def statuscmd(self):
-        return ["systemctl", "status", self.name]
-    @property
-    def startcmd(self):
-        return ["systemctl", "start", self.name]
-    @property
-    def restartcmd(self):
-        return ["systemctl", "restart", self.name]
-    @property
-    def stopcmd(self):
-        return ["systemctl", "stop", self.name]
-    @property
-    def enablecmd(self):
-        return ["systemctl", "enable", self.name]
-    @property
-    def disablecmd(self):
-        return ["systemctl", "disable", self.name]
-
-@dataclass
-class editable_file:
-    path: pathlib.Path
-    base_path: pathlib.Path
-    pathhash: str
-    def read(self):
-        fd = open(self.path,"rb")
-        contents = fd.read()
-        fd.close()
-        return contents
-
-    def gen_filename(self, description):
-        sh = hashfile(self.path)[0:16]
-        p = pathhash(self.path)
-        t = int(time.time())
-        s = f"change_{p}_{t}_{sh}"
-        return s
-
-    def backup_and_write(self, bs:bytes):
-        self.snapshot(snapid=self.gen_filename("change"))
-        self.write(bs)
-
-    def write(self, bs:bytes):
-        fd = open(self.path,"wb")
-        res = fd.write(bs)
-        fd.close()
-        return res
-
-    def snapshot(self, snapid=None):
-        if snapid is None:
-            snapid = self.gen_filename("default")
-        p = self.base_path  / hash(self.path) 
-        p.mkdir(parents=True, exist_ok=True)
-        fn = p / snapid
-        with open(fn, "wb") as fd:
-            fd.write(self.read())
-        return snapid
-
-    def restore(self, snapid):
-        p = self.base_path  / hash(self.path) / snapid
-        self.snapshot( self.gen_filename("prerestore") )
-        with open(p, "rb") as fd:
-            self.write( fd.read() )
-        return snapid
-
-    def ls_snapshots(self):
-        p = self.base_path / hash(self.path)
-        if not p.exists():
-            return []
-        fs = [os.path.basename(x) for x in p.iterdir()]
-        fs.sort()
-        return fs
-
-
-
-class profile_files(dict):
-    #list of backup-able files to store snapshots of each file to allow fast switching between profiles
-    pass
 
 allowed_services = [
         "mmdvmhost",
@@ -276,6 +121,10 @@ def restore_backup(h,bid):
 
 
 
+
+
+
+
 @app.get("/services/")
 def list_services():
     return svcs
@@ -312,7 +161,11 @@ def verb_service(svc="all",verb=""):
     else:
         return HTTPException(status_code=404)
 
+
+
+
+
+
 @app.get("/")
 def read_root():
     return {"interactive_docs_paths": ["/docs", "/redoc"]}
-
