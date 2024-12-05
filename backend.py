@@ -57,28 +57,71 @@ app.add_middleware(
 
 class system_services(dict):
     def __getattr__(self, name):
-        return {each.name:getattr(each,name) for each in self.values()}
+        return callable_dict({each.name:getattr(each,name) for each in self.values()})
+
+class callable_dict(dict):
+    def __call__(self, *args, **kwargs):
+        return {name:fn(*args,**kwargs) for name,fn in self.items()}
 
 # result = subprocess.run(["python", "-c", "print(subprocess)"], capture_output=True, text=True, timeout=5)
 
+service_verbs = ["restart","stop","status","start","enable","disable"]
 @dataclass
 class system_service:
     name: str
     timeout: int = 10
-    def restart(self):
-        ret = subprocess.run(self.restartcmd(self.name), capture_output=True, text=True, timeout=self.timeout)
-        return ret
+    def __getattr__(self, name):
+        if name in service_verbs:
+            if hasattr(self,name+"cmd"):
+                def fn():
+                    cmd = getattr(self, name+"cmd")
+                    ret = subprocess.run(cmd, capture_output=True, text=True, timeout=self.timeout)
+                    return ret
+                return fn
+            else:
+                raise(NotImplementedError)
+        else:
+            print(self,name)
+
+class rcd_service(system_service):
     @property
-    def status(self):
-        ret = subprocess.run(self.statuscmd(self.name), capture_output=True, text=True, timeout=self.timeout)
-        #args option: input = "test1234\n"
-        return ret
+    def statuscmd(self):
+        return ["rc-service", self.name, "status"]
+    @property
+    def startcmd(self):
+        return ["rc-service", self.name, "start"]
+    @property
+    def restartcmd(self):
+        return ["rc-service", self.name, "restart"]
+    @property
+    def stopcmd(self):
+        return ["rc-service", self.name, "stop" ]
+    @property
+    def enablecmd(self):
+        return ["rc-update", "add", self.name]
+    @property
+    def disablecmd(self):
+        return ["rc-update", "del", self.name]
 
 class systemd_service(system_service):
-    def statuscmd(self, name):
-        return ["systemctl", "status", name]
-    def restartcmd(self, name):
-        return ["systemctl", "restart", name]
+    @property
+    def statuscmd(self):
+        return ["systemctl", "status", self.name]
+    @property
+    def startcmd(self):
+        return ["systemctl", "start", self.name]
+    @property
+    def restartcmd(self):
+        return ["systemctl", "restart", self.name]
+    @property
+    def stopcmd(self):
+        return ["systemctl", "stop", self.name]
+    @property
+    def enablecmd(self):
+        return ["systemctl", "enable", self.name]
+    @property
+    def disablecmd(self):
+        return ["systemctl", "disable", self.name]
 
 @dataclass
 class editable_file:
@@ -145,6 +188,7 @@ allowed_services = [
         "docker",
         "sshd",
         "mr",
+        "snapcast-server",
         ]
 allowed_paths = [
         "/etc/MMDVM.ini",
@@ -249,23 +293,24 @@ def get_service(svc="all"):
 @app.get("/services/{svc}/status")
 def status_service(svc="all"):
     if svc == "all":
-        return svcs.status
+        return svcs.status()
     else:
         if svc in svcs:
-            return svcs[svc].status
+            return svcs[svc].status()
         else:
             return HTTPException(status_code=404)
 
 
-@app.post("/services/{svc}/restart")
-def restart_service(svc="all"):
-    if svc == "all":
-        return svcs.restart()
+@app.post("/services/{svc}/{verb}")
+def verb_service(svc="all",verb=""):
+    if svc in svcs:
+        if verb in service_verbs:
+            try:
+                return getattr(svcs[svc], verb)()
+            except NotImplementedError as e:
+                print(svc,verb,e)
     else:
-        if svc in svcs:
-            return svcs[svc].restart()
-        else:
-            return HTTPException(status_code=404)
+        return HTTPException(status_code=404)
 
 @app.get("/")
 def read_root():
