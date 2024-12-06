@@ -19,20 +19,24 @@
     };
 
     ws.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        messages = [...messages, data];
-      } catch (e) {
-        console.error('Invalid JSON:', event.data);
+      console.log(event);
+      const data = JSON.parse(event.data);
+      console.log(data);
+      for( let key in data ){
+        if( key in logs ){
+          logs[key] = data[key];
+        }
       }
     };
 
     ws.onclose = () => {
       console.log('WebSocket disconnected');
+      //setTimeout(wsconnect, 1000);
     };
 
     ws.onerror = (error) => {
       console.error('WebSocket error:', error);
+      //setTimeout(wsconnect, 5000);
     };
   }
 

@@ -167,28 +167,39 @@ def verb_service(svc="all",verb=""):
         return HTTPException(status_code=404)
 
 log_files = ["test.log","/var/log/X.0.log","cmd://journalctl -f","cmd://dmesg -w"]
-clients: List[WebSocket] = []
+log_files = ["test.log"]
 lm = LogMonitor(log_files)
+clients = []
+# asyncio.create_task(lm.start());
 
 @app.on_event("startup")
 async def run_logs():
-    asyncio.create_task(lm.run())
+    print("startup")
+    await lm.start()
+    print("done")
 
 @app.get("/logs/")
 def list_logs():
-    return {n:lm.history[n] for n in log_files}
+    # return {n:lm.history[n] for n in log_files}
+    return {n:[] for n in log_files}
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
     clients.append(websocket)
-    for file, lines in history.items():
+    lm.clients.append(websocket)
+    #could send history over websocket
+    #but we get it via HTTP right now
+    for file, lines in lm.history.items():
         await websocket.send_json({file: list(lines)})
+
     try:
         while True:
-            data = await queues  # Keep connection open
+            # data = await websocket.receive_text()
+            asyncio.sleep(0.1)
     except:
         clients.remove(websocket)
+        lm.clients.remove(websocket)
 
 
 

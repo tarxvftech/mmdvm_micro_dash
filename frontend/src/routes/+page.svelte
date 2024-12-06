@@ -76,7 +76,7 @@
 
 <div class="main">
 	<div>
-		<button on:click={audiodemo}>LIVE</button>
+		<button on:click={audiodemo}>AUDIO</button>
 	</div>
 	<table>
 		<tr>
