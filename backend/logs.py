@@ -11,7 +11,6 @@ class LogMonitor:
         self.processes = {}
         self.tasks: List[asyncio.Task] = []
         self.stop_event = asyncio.Event()
-        self.clients = []
 
     def set_log_files(self, log_files):
         self.log_files = log_files
@@ -39,29 +38,20 @@ class LogMonitor:
                 break
 
     async def consume_logs(self):
-        print("start_consume_logs")
         while not self.stop_event.is_set():
             for file, queue in self.queues.items():
                 while not queue.empty():
                     line = await queue.get()
                     self.history[file].append(line)
                     print(file,line)
-                    print("lm.clients",self.clients)
-                    for client in self.clients:
-                        print(client)
-                        await client.send_json( {file: line} )
-                        print("done",client)
-                    print("done q")
             await asyncio.sleep(0.01)
 
     async def start(self):
-        print("start_start")
         for file in self.log_files:
             task = asyncio.create_task(self.tail(file))
             self.tasks.append(task)
         consumer_task = asyncio.create_task(self.consume_logs())
         self.tasks.append(consumer_task)
-        print("start_done")
 
     async def stop(self):
         self.stop_event.set()
@@ -77,6 +67,7 @@ class LogMonitor:
 
 
 async def main():
+    log_files = ["test.log","/var/log/X.0.log","cmd://journalctl -f","cmd://dmesg -w"]
     log_files = ["/var/log/X.0.log", "test.log"]
     monitor = LogMonitor(log_files)
 
