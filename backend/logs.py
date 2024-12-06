@@ -1,3 +1,4 @@
+import sys
 import asyncio
 from collections import deque
 from typing import Dict, Deque, List
@@ -11,9 +12,6 @@ class LogMonitor:
         self.processes = {}
         self.tasks: List[asyncio.Task] = []
         self.stop_event = asyncio.Event()
-
-    def set_log_files(self, log_files):
-        self.log_files = log_files
 
     async def tail(self, file: str):
         cmd = "cmd://"
@@ -61,20 +59,19 @@ class LogMonitor:
             task.cancel()
         await asyncio.gather(*self.tasks, return_exceptions=True)
 
-    async def run(self,*args,**kwargs):
-        await self.start(*args,**kwargs)
+    async def run(self):
+        await self.start()
         await self.stop_event.wait()
 
 
-async def main():
+if __name__ == "__main__":
     log_files = ["test.log","/var/log/X.0.log","cmd://journalctl -f","cmd://dmesg -w"]
     log_files = ["/var/log/X.0.log", "test.log"]
     monitor = LogMonitor(log_files)
-
     try:
-        await monitor.run()
+        asyncio.run(monitor.run())
     except KeyboardInterrupt:
-        await monitor.stop()
+        pass
+        # asyncio.run(monitor.stop())
 
-if __name__ == "__main__":
-    asyncio.run(main())
+

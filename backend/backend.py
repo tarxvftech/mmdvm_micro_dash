@@ -1,6 +1,8 @@
-import pathlib
+import json
 import pprint
 pp=pprint.pprint
+import pathlib
+import configparser
 
 from fastapi import Request, FastAPI, HTTPException, File, UploadFile, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
@@ -31,26 +33,16 @@ app.add_middleware(
 )
 
 
+with open("config.ini","r") as fd:
+    config = json.load(fd)
+allowed_services = config["services"]
+allowed_paths = config["editable"]
+backups_base_path = pathlib.Path(config["backups"])
 
-allowed_services = [
-        "mmdvmhost",
-        "m17gateway",
-        "docker",
-        "sshd",
-        "mr",
-        "snapcast-server",
-        ]
-allowed_paths = [
-        "/etc/MMDVM.ini",
-        "/etc/M17Gateway.ini",
-        "/etc/mosquitto/mosquitto.conf",
-        "/boot/wpa_supplicant_additions.txt",
-        "/etc/hostname",
-        "./makefile",
-        ]
-# backups_base_path = pathlib.Path("/data/backups/")
-backups_base_path = pathlib.Path("./backups/")
+log_files = ["test.log","/var/log/X.0.log","cmd://journalctl -f","cmd://dmesg -w"]
+log_files = config["logs"]
 
+lm = LogMonitor(log_files)
 
 pp(allowed_paths)
 files = profile_files({ pathhash(p):editable_file(p, backups_base_path, pathhash(p)) for p in allowed_paths })
@@ -166,21 +158,25 @@ def verb_service(svc="all",verb=""):
     else:
         return HTTPException(status_code=404)
 
-clients = []
 
+@app.on_event("startup")
+async def startup():
+    asyncio.create_task(lm.run())
+
+@app.get("/logs/")
+def list_logs():
+    return {n:lm.history[n] for n in log_files}
+
+clients = []
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
     clients.append(websocket)
-    #could send history over websocket
-    #but we get it via HTTP right now
-    for file, lines in lm.history.items():
-        await websocket.send_json({file: list(lines)})
 
     try:
         while True:
             # data = await websocket.receive_text()
-            asyncio.sleep(0.1)
+            await asyncio.sleep(0.1)
     except:
         clients.remove(websocket)
 
