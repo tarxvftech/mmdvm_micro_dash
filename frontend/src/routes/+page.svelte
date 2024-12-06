@@ -37,26 +37,64 @@
 		lastheard.forceUpdate();
 	}
 	demo();
+	async function audiodemo(){
+		let audioCtx = new AudioContext();
+		/*
+		let myArrayBuffer = audioCtx.createBuffer(
+			2,
+			audioCtx.sampleRate * 3,
+			audioCtx.sampleRate,
+		);
+		 */
+		let fs = 8000;
+		let myArrayBuffer = audioCtx.createBuffer(
+			1,
+			fs * 1,
+			fs
+		);
+		for (let channel = 0; channel < myArrayBuffer.numberOfChannels; channel++) {
+			const nowBuffering = myArrayBuffer.getChannelData(channel);
+			for (let i = 0; i < myArrayBuffer.length; i++) {
+				// Math.random() is in [0; 1.0]
+				// audio needs to be in [-1.0; 1.0]
+				nowBuffering[i] = Math.random() * 2 - 1;
+			}
+		}
+		let source = audioCtx.createBufferSource();
+		source.buffer = myArrayBuffer;
+		source.connect(audioCtx.destination);
+		console.log(source);
+		source.start();
+
+	}
 </script>
 <style>
+	.main {
+		clear:both;
+	}
 </style>
 
-<table>
-	<tr>
-		{#each columns as col}
-			<th>{col}</th>
-		{/each}
-	</tr>
-
-	{#each lastheard as e}
+<div class="main">
+	<div>
+		<button on:click={audiodemo}>LIVE</button>
+	</div>
+	<table>
 		<tr>
 			{#each columns as col}
-				{#if col == "Time" }
-					<td><Time timestamp="{e[col]}" live="10" relative /></td>
-				{:else}
-					<td>{ e[col] }</td>
-				{/if}
+				<th>{col}</th>
 			{/each}
 		</tr>
-	{/each}
-</table>
+
+		{#each lastheard as e}
+			<tr>
+				{#each columns as col}
+					{#if col == "Time" }
+						<td><Time timestamp="{e[col]}" live="10" relative /></td>
+					{:else}
+						<td>{ e[col] }</td>
+					{/if}
+				{/each}
+			</tr>
+		{/each}
+	</table>
+</div>

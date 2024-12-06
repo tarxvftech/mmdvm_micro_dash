@@ -1,40 +1,80 @@
 <script>
+  import { onDestroy } from 'svelte';
   import { onMount } from "svelte";
-  import { svcapi} from "$lib/microdash";
+  import { logapi} from "$lib/microdash";
+  import { apiURL, wsURL } from '$lib/config';
 
-  let svcs = {};
-  const apiURL = "http://localhost:8000/";
-  let apis = {"svcapi":new svcapi(apiURL)};
+  let ws;
+  let logs = {};
+  let apis = {"logapi":new logapi(apiURL)};
+  let pageerror = "Loading...";
+
+  let currentfile = "";
+
+  function wsconnect() {
+    ws = new WebSocket(wsURL);
+
+    ws.onopen = () => {
+      console.log('WebSocket connected');
+    };
+
+    ws.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        messages = [...messages, data];
+      } catch (e) {
+        console.error('Invalid JSON:', event.data);
+      }
+    };
+
+    ws.onclose = () => {
+      console.log('WebSocket disconnected');
+    };
+
+    ws.onerror = (error) => {
+      console.error('WebSocket error:', error);
+    };
+  }
+
   onMount(async function() {
-    svcs = await apis.svcapi.list();
+    try {
+      logs = await apis.logapi.list();
+      console.log(logs);
+      pageerror = "";
+      wsconnect();
+    }catch(e){
+      console.log(e);
+    }
   });
+  onDestroy(() => {
+    if (ws) {
+      ws.close();
+    }
+  });
+  async function selected(e){
+    console.log("Selected:",e);
+    currentfile = e.target.value;
+  }
 </script>
 <style>
-.services {
-  clear:both;
-}
-
+  .logs {
+    clear: both;
+  }
 </style>
 <div>
-  <div class="services">
-    {#if svcs }
-    <table>
-      <tr>
-	<th>name</th>
-	<th>status</th>
-	<th>do</th>
-      </tr>
-      {#each Object.values(svcs) as svc }
-      <tr>
-	<th>{svc.name}</th>
-	<td>{svc.status}</td>
-	<td><button on:click="{apis.svcapi.status(svc.name)}">status</button></td>
-	<td><button on:click="{apis.svcapi.start(svc.name)}">start/enable</button></td>
-	<td><button on:click="{apis.svcapi.restart(svc.name)}">restart</button></td>
-	<td><button on:click="{apis.svcapi.stop(svc.name)}">stop/disable</button></td>
-      </tr>
+  <div class="logs">
+    <div class="error">{pageerror}</div>
+    <select on:change={selected}>
+      <option value="">Select log to view</option>
+      {#each Object.keys(logs) as file }
+      <option value={file}>{file}</option>
       {/each}
-    </table>
+    </select>
+    <div>
+    {#if currentfile }
+      <h2>{currentfile}</h2>
+      <pre>{#each logs[currentfile] as line }{line + "\n"}{/each}</pre> 
     {/if}
+    </div>
   </div>
 </div>

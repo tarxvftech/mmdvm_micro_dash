@@ -2,12 +2,17 @@ import pathlib
 import pprint
 pp=pprint.pprint
 
-from fastapi import Request, FastAPI, HTTPException, File, UploadFile
+from fastapi import Request, FastAPI, HTTPException, File, UploadFile, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
+
+import asyncio
+from typing import Dict, List
+from collections import deque
 
 
 from misc import *
 from files import *
+from logs import LogMonitor
 from services import *
 
 app = FastAPI()
@@ -161,8 +166,29 @@ def verb_service(svc="all",verb=""):
     else:
         return HTTPException(status_code=404)
 
+log_files = ["test.log","/var/log/X.0.log","cmd://journalctl -f","cmd://dmesg -w"]
+clients: List[WebSocket] = []
+lm = LogMonitor(log_files)
 
+@app.on_event("startup")
+async def run_logs():
+    asyncio.create_task(lm.run())
 
+@app.get("/logs/")
+def list_logs():
+    return {n:lm.history[n] for n in log_files}
+
+@app.websocket("/ws")
+async def websocket_endpoint(websocket: WebSocket):
+    await websocket.accept()
+    clients.append(websocket)
+    for file, lines in history.items():
+        await websocket.send_json({file: list(lines)})
+    try:
+        while True:
+            data = await queues  # Keep connection open
+    except:
+        clients.remove(websocket)
 
 
 

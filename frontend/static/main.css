@@ -9,6 +9,12 @@
   --xvfblue: #36a9e1;
 }
 
+header nav ul:first-child > li:first-child a {
+  font-weight: normal ;
+}
+header nav ul > li.thispage a {
+  font-weight: bold !important;
+}
 header nav img.logo {
   /*max-height: 2em;*/
   max-width: 3em;

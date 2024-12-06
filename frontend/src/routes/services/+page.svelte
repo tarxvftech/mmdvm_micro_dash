@@ -1,9 +1,9 @@
 <script>
   import { onMount } from "svelte";
   import { svcapi} from "$lib/microdash";
+  const apiURL = "http://localhost:8000/";
 
   let svcs = {};
-  const apiURL = "http://localhost:8000/";
   let apis = {"svcapi":new svcapi(apiURL)};
   onMount(async function() {
     svcs = await apis.svcapi.list();

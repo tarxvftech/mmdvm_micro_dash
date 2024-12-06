@@ -1,13 +1,32 @@
 
-class svcapi {
+class logapi {
   constructor(apiURL){
-	console.log(apiURL);
 	this.base = apiURL;
   }
   async _get(url){
     const r = await fetch(url);
     const c = await r.json();
-    console.log(c);
+    return c;
+  }
+  async exec(verb,name){
+    const r = await fetch( this.base + "logs/" + name + "/" + verb, {
+      method: "POST",
+    });
+    const c = await r.json();
+    return c;
+  }
+  async list(){
+    let logs = await this._get( this.base + "logs" );
+    return logs;
+  }
+}
+class svcapi {
+  constructor(apiURL){
+	this.base = apiURL;
+  }
+  async _get(url){
+    const r = await fetch(url);
+    const c = await r.json();
     return c;
   }
   async exec(verb,name){
@@ -15,7 +34,6 @@ class svcapi {
       method: "POST",
     });
     const c = await r.json();
-    console.log(verb,name,c);
     return c;
   }
   async status(name){
@@ -23,7 +41,6 @@ class svcapi {
       method: "GET",
     });
     const c = await r.json();
-    console.log("status",name,c);
     return c;
   }
   async start(name){
@@ -44,7 +61,6 @@ class svcapi {
   async list(){
     let svcs = await this._get( this.base + "services" );
     let statuses = await this._get( this.base + "services/all/status" );
-    console.log("svcs,statuses",svcs,statuses);
     for( let s in statuses ){
       svcs[s].status = statuses[s].returncode;
     }
@@ -53,11 +69,9 @@ class svcapi {
 };
 class fileapi {
   constructor(apiURL){
-	console.log(apiURL);
 	this.base = apiURL;
   }
   async _get(url){
-    console.log(url);
     const r = await fetch(url);
     const c = await r.json();
     return c;
@@ -98,4 +112,4 @@ class fileapi {
   }
 };
 
-export { fileapi, svcapi };
+export { fileapi, svcapi, logapi };

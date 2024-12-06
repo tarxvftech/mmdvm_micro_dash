@@ -15,6 +15,8 @@
   //theme
   import { oneDark } from "@codemirror/theme-one-dark";
 
+  const apiURL = "http://localhost:8000/";
+
   async function hashString(message) {
     const encoder = new TextEncoder();
     const data = encoder.encode(message);
@@ -31,12 +33,20 @@
   let filecontents = "";
   let loadedfilecontenthash = "";
   let filecontenthashnew = "";
-  let editorerrors = "File not loaded yet, this is example text. If you're seeing this there might be an error loading the file.";
-  const apiURL = "http://localhost:8000/";
+  let pageerrors = "Loading list of files from API.";
+  let editorerrors = "File not loaded yet. If you're seeing this there might be an error loading the file.";
   let apis = {"fileapi":new fileapi(apiURL)};
   onMount(async function() {
-    files = await apis.fileapi.list();
-    console.log("Files:",files);
+    try {
+      files = await apis.fileapi.list();
+      pageerrors = `Loaded ${Object.values(files).length} files.`;
+      setTimeout(() => {
+	pageerrors = "";
+      }, 3000);
+    } catch(e){
+      pageerrors = "Error loading list of files from API: ";
+      pageerrors += e;
+    }
   });
   let contentschanged = false;
   let loadedrestore = false;
@@ -166,6 +176,9 @@
       <option value={file.pathhash}>{file.path}</option>
       {/each}
     </select>
+  <div class="errors">
+  {pageerrors}
+  </div>
     {#if currentfile }
     <h2>{files[currentfile].path}</h2>
     <div class="filehistory">
