@@ -38,8 +38,6 @@ with open("config.ini","r") as fd:
 allowed_services = config["services"]
 allowed_paths = config["editable"]
 backups_base_path = pathlib.Path(config["backups"])
-
-log_files = ["test.log","/var/log/X.0.log","cmd://journalctl -f","cmd://dmesg -w"]
 log_files = config["logs"]
 
 lm = LogMonitor(log_files)

@@ -4,6 +4,7 @@ from paho.mqtt import client as mqtt_client
 async def broadcast(message):
     for client in clients:
         await client.send_json(message)
+
 async def mqtt_loop():
     def on_message(client, userdata, msg):
         line = msg.payload.decode()
@@ -18,7 +19,7 @@ async def mqtt_loop():
 async def main():
     await asyncio.gather(mqtt_loop())
 
-MQTT_BROKER = "localhost"
+mQTT_BROKER = "localhost"
 MQTT_PORT = 1883
 MQTT_TOPIC_SUB = "logs/#"
 MQTT_TOPIC_PUB = "logs/output"

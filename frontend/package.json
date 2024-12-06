@@ -26,6 +26,7 @@
 		"@codemirror/language": "^6.7.0",
 		"@codemirror/merge": "^6.1.0",
 		"@codemirror/theme-one-dark": "^6.1.2",
+		"mqtt": "^5.10.3",
 		"paho-mqtt": "^1.1.0",
 		"svelte-codemirror-editor": "^1.1.0"
 	}

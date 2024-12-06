@@ -3,6 +3,7 @@
   import { onMount } from "svelte";
   import { logapi} from "$lib/microdash";
   import { apiURL, wsURL } from '$lib/config';
+  import mqtt from 'mqtt';
 
   let ws;
   let logs = {};
@@ -10,50 +11,39 @@
   let pageerror = "Loading...";
 
   let currentfile = "";
-
-  function wsconnect() {
-    ws = new WebSocket(wsURL);
-
-    ws.onopen = () => {
-      console.log('WebSocket connected');
-    };
-
-    ws.onmessage = (event) => {
-      console.log(event);
-      const data = JSON.parse(event.data);
-      console.log(data);
-      for( let key in data ){
-        if( key in logs ){
-          logs[key] = data[key];
-        }
-      }
-    };
-
-    ws.onclose = () => {
-      console.log('WebSocket disconnected');
-      //setTimeout(wsconnect, 1000);
-    };
-
-    ws.onerror = (error) => {
-      console.error('WebSocket error:', error);
-      //setTimeout(wsconnect, 5000);
-    };
-  }
+  let mq;
 
   onMount(async function() {
     try {
       logs = await apis.logapi.list();
       console.log(logs);
       pageerror = "";
-      wsconnect();
     }catch(e){
       console.log(e);
     }
+    mq = mqtt.connect(wsURL);
+
+    mq.on('connect', () => {
+      mq.subscribe('logs/#');
+      //mq.publish('svelte/topic', 'Hello from Svelte');
+    });
+
+    mq.on('message', (topic, message) => {
+      let m = message.toString();
+      console.log(topic,m);
+      if( topic.startsWith("logs/") ){
+        let filename = topic.slice(5);
+        if( filename in logs ){
+          logs[filename].push(m)
+        } else {
+          logs[filename] = [m];
+        }
+        logs[filename] = logs[filename];
+      }
+    });
   });
   onDestroy(() => {
-    if (ws) {
-      ws.close();
-    }
+    mq.end();
   });
   async function selected(e){
     console.log("Selected:",e);
