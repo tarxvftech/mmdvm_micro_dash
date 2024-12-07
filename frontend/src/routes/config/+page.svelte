@@ -42,7 +42,7 @@
       pageerrors = `Loaded ${Object.values(files).length} files.`;
       setTimeout(() => {
 	pageerrors = "";
-      }, 3000);
+      }, 1500);
     } catch(e){
       pageerrors = "Error loading list of files from API: ";
       pageerrors += e;

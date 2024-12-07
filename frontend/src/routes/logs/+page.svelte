@@ -57,13 +57,13 @@
 </style>
 <div>
   <div class="logs">
-    <div class="error">{pageerror}</div>
     <select on:change={selected}>
       <option value="">Select log to view</option>
       {#each Object.keys(logs) as file }
       <option value={file}>{file}</option>
       {/each}
     </select>
+    <div class="error">{pageerror}</div>
     <div>
     {#if currentfile }
       <h2>{currentfile}</h2>
